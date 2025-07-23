@@ -15,6 +15,18 @@ public class PlayerController : MonoBehaviour
     private float horizontalInput;
     private Vector2 velocity;
 
+    // ground detection
+    public LayerMask groundLayerMask = 1; // default to layer 1 (Ground)
+    public float groundCheckDistance = 0.1f;
+    public Transform groundCheckPoint;
+    private bool isGrounded;
+
+    // jump settings
+    public float jumpForce = 15f;
+    public float jumpCutMultiplier = 0.5f;
+    private bool jumpPressed;
+    private bool jumpHeld;
+
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
@@ -24,16 +36,20 @@ public class PlayerController : MonoBehaviour
     void Update()
     {
         GetInput();
+        CheckGrounded();
     }
 
     void FixedUpdate()
     {
         HandleMovement();
+        HandleJump();
     }
 
     void GetInput()
     {
         horizontalInput = Input.GetAxis("Horizontal");
+        jumpPressed = Input.GetKeyDown(KeyCode.Space);
+        jumpHeld = Input.GetKey(KeyCode.Space);
     }
 
     void HandleMovement()
@@ -67,6 +83,36 @@ public class PlayerController : MonoBehaviour
         else if (horizontalInput < 0)
         {
             transform.localScale = new Vector3(-1, 1, 1);
+        }
+    }
+
+    void CheckGrounded()
+    {
+        RaycastHit2D hit = Physics2D.Raycast(
+            groundCheckPoint.position,
+            Vector2.down,
+            groundCheckDistance,
+            groundLayerMask
+        );
+        isGrounded = hit.collider != null; // check if the raycast hit something on the ground layer
+
+        // Optionally, visualize the ground check in the editor
+        Color rayColor = isGrounded ? Color.green : Color.red;
+        Debug.DrawRay(groundCheckPoint.position, Vector2.down * groundCheckDistance, rayColor);
+    }
+
+    void HandleJump()
+    {
+        if (jumpPressed && isGrounded)
+        {
+            velocity.y = jumpForce;
+            rb.linearVelocity = velocity;
+        }
+
+        if (!jumpHeld && velocity.y > 0)
+        {
+            velocity.y *= jumpCutMultiplier; // apply jump cut if jump is released early
+            rb.linearVelocity = velocity;
         }
     }
 }
